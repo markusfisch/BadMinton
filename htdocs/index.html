@@ -72,7 +72,13 @@ var M = Math,
 	D = document,
 	W = window,
 	FA = Float32Array,
-	PLAYER = 100,
+	PLANET = 100,
+	ASTRONAUT_IDLE0 = 200,
+	ASTRONAUT_IDLE1 = 201,
+	ASTRONAUT_MOVE0 = 202,
+	ASTRONAUT_MOVE1 = 203,
+	ASTRONAUT_MOVE2 = 204,
+	ASTRONAUT_MOVE3 = 205,
 	atlas,
 	sprites = [],
 	gl,
@@ -101,7 +107,8 @@ var M = Math,
 	pointersY = [],
 	keysDown = [],
 	entitiesLength,
-	entities
+	entities,
+	player
 
 M.TAU = M.TAU || M.PI * 2
 M.PI2 = M.PI2 || M.PI / 2
@@ -150,11 +157,48 @@ function drawText(text, x, y) {
 	}
 }
 
-function drawEntities() {
-	for (var i = 0; i < entitiesLength; ++i) {
-		var e = entities[i]
-		drawSprite(e.sprite, e.x, e.y + M.sin(now * .001) * .05)
+function drawEntity(e, wx, wy) {
+	var sprite,
+		freq,
+		frames,
+		dx = e.tx - e.x,
+		dy = e.ty - e.y,
+		adx = M.abs(dx),
+		ady = M.abs(dy)
+	if (adx < .001 && ady < .001) {
+		frames = e.idleLength
+		sprite = e.idle[e.frame % frames]
+		freq = e.idleFreq
+		if (e.finished) {
+			e.finished()
+		}
+	} else {
+		var speed = e.speed * factor
+		if (adx > speed) {
+			var pos = dx > 0
+			e.x += pos ? speed : -speed
+			e.direction = pos ? 1 : -1
+		} else {
+			e.x = e.tx
+		}
+		if (ady > speed) {
+			e.y += dy > 0 ? speed : -speed
+		} else {
+			e.y = e.ty
+		}
+		frames = e.moveLength
+		sprite = e.move[e.frame % frames]
+		freq = e.moveFreq
+		if (e.moved) {
+			e.moved()
+		}
 	}
+	if (frames > 0 && now - e.last > freq) {
+		++e.frame
+		e.last = now
+	}
+	drawSprite(sprite, e.x - wx, e.y - (e.height - sprite.h) - wy,
+		e.direction)
 }
 
 function initFrame() {
@@ -182,8 +226,14 @@ function run() {
 
 	input()
 	initFrame()
-	drawEntities()
-	drawText("HELLO WORLD!", 0, 0)
+
+	var wx = player.x,
+		wy = player.y
+	drawSprite(sprites[PLANET], wx, wy, .5, .5)
+	for (var i = 0; i < entitiesLength; ++i) {
+		drawEntity(entities[i], -wx, -wy)
+	}
+	drawText("WHERE IS IT?", 0, yMax * .5)
 }
 
 function pageXToGl(x) {
@@ -238,14 +288,53 @@ function keyDown(event) {
 	setKey(event, true)
 }
 
+function getMaxHeight(sprites) {
+	if (sprites == null) {
+		return 0
+	}
+	var max = 0
+	for (var i = sprites.length; i-- > 0;) {
+		max = M.max(max, sprites[i].h)
+	}
+	return max
+}
+
 function createEntities() {
 	entities = []
-	entities.push({
-		sprite: sprites[PLAYER],
+
+	entities.push(player = {
+		idle: [
+			sprites[ASTRONAUT_IDLE0],
+			sprites[ASTRONAUT_IDLE1],
+		],
+		idleFreq: 2000,
+		move: [
+			sprites[ASTRONAUT_MOVE0],
+			sprites[ASTRONAUT_MOVE1],
+			sprites[ASTRONAUT_MOVE2],
+			sprites[ASTRONAUT_MOVE3],
+		],
+		moveFreq: 400,
 		x: 0,
-		y: 0
+		y: .5,
+		direction: 1,
+		tx: 0,
+		ty: 0,
+		speed: .02,
 	})
+
 	entitiesLength = entities.length
+
+	for (var i = 0; i < entitiesLength; ++i) {
+		var e = entities[i]
+		e.tx = typeof e.tx === 'undefined' ? e.x : e.tx
+		e.ty = typeof e.ty === 'undefined' ? e.y : e.ty
+		e.idleLength = e.idle ? e.idle.length : 0
+		e.moveLength = e.move ? e.move.length : 0
+		e.height = M.max(getMaxHeight(e.idle), getMaxHeight(e.move))
+		e.frame = 0
+		e.last = 0
+	}
 }
 
 function scale(sprite) {
@@ -266,7 +355,7 @@ function resize() {
 	gl.canvas.height = height
 	gl.viewport(0, 0, width, height)
 
-	var ref = sprites[PLAYER].size * 5
+	var ref = sprites[ASTRONAUT_IDLE0].size * 5
 	scaleFactor = .45 / halfWidth * M.min(width / ref, height / ref)
 	letterSpacing = scaleFactor * 5
 	spaceWidth = scaleFactor * 10
@@ -288,48 +377,54 @@ function resize() {
 
 function calculateSpriteRects() {
 	var res = [
-			44, {/*ccomma*/x:79,y:28,w:3,h:4},
-			46, {/*cpoint*/x:79,y:37,w:3,h:3},
-			48, {/*c0*/x:72,y:46,w:5,h:7},
-			49, {/*c1*/x:79,y:1,w:4,h:7},
-			50, {/*c2*/x:72,y:37,w:5,h:7},
-			51, {/*c3*/x:72,y:28,w:5,h:7},
-			52, {/*c4*/x:72,y:19,w:5,h:7},
-			53, {/*c5*/x:72,y:10,w:5,h:7},
-			54, {/*c6*/x:72,y:1,w:5,h:7},
-			55, {/*c7*/x:71,y:55,w:5,h:7},
-			56, {/*c8*/x:65,y:46,w:5,h:7},
-			57, {/*c9*/x:65,y:37,w:5,h:7},
-			58, {/*ccolon*/x:79,y:19,w:3,h:5},
-			33, {/*cexcl*/x:79,y:10,w:3,h:7},
-			63, {/*cquest*/x:51,y:1,w:5,h:7},
-			65, {/*cA*/x:65,y:28,w:5,h:7},
-			66, {/*cB*/x:65,y:19,w:5,h:7},
-			67, {/*cC*/x:65,y:10,w:5,h:7},
-			68, {/*cD*/x:65,y:1,w:5,h:7},
-			69, {/*cE*/x:64,y:55,w:5,h:7},
-			70, {/*cF*/x:58,y:46,w:5,h:7},
-			71, {/*cG*/x:58,y:37,w:5,h:7},
-			72, {/*cH*/x:58,y:28,w:5,h:7},
-			73, {/*cI*/x:58,y:19,w:5,h:7},
-			74, {/*cJ*/x:78,y:55,w:4,h:7},
-			75, {/*cK*/x:58,y:10,w:5,h:7},
-			76, {/*cL*/x:58,y:1,w:5,h:7},
-			77, {/*cM*/x:42,y:37,w:7,h:7},
-			78, {/*cN*/x:50,y:46,w:6,h:7},
-			79, {/*cO*/x:57,y:55,w:5,h:7},
-			80, {/*cP*/x:50,y:55,w:5,h:7},
-			81, {/*cQ*/x:42,y:55,w:6,h:7},
-			82, {/*cR*/x:51,y:37,w:5,h:7},
-			83, {/*cS*/x:51,y:28,w:5,h:7},
-			84, {/*cT*/x:51,y:19,w:5,h:7},
-			85, {/*cU*/x:51,y:10,w:5,h:7},
-			86, {/*cV*/x:42,y:28,w:7,h:7},
-			87, {/*cW*/x:42,y:19,w:7,h:7},
-			88, {/*cX*/x:42,y:10,w:7,h:7},
-			89, {/*cY*/x:42,y:1,w:7,h:7},
-			90, {/*cZ*/x:42,y:46,w:6,h:7},
-			PLAYER, {/*player*/x:1,y:1,w:39,h:63},
+			PLANET, {/*planet*/x:1,y:1,w:278,h:198},
+			ASTRONAUT_IDLE0, {/*astronaut_idle0*/x:377,y:1,w:35,h:68},
+			ASTRONAUT_IDLE1, {/*astronaut_idle1*/x:377,y:71,w:33,h:69},
+			ASTRONAUT_MOVE0, {/*astronaut_move0*/x:281,y:1,w:50,h:69},
+			ASTRONAUT_MOVE1, {/*astronaut_move1*/x:333,y:78,w:42,h:73},
+			ASTRONAUT_MOVE2, {/*astronaut_move2*/x:333,y:1,w:42,h:75},
+			ASTRONAUT_MOVE3, {/*astronaut_move3*/x:281,y:72,w:47,h:70},
+			44, {/*ccomma*/x:362,y:162,w:3,h:4},
+			46, {/*cpoint*/x:405,y:196,w:3,h:3},
+			48, {/*c0*/x:333,y:162,w:5,h:7},
+			49, {/*c1*/x:346,y:162,w:4,h:7},
+			50, {/*c2*/x:368,y:153,w:5,h:7},
+			51, {/*c3*/x:361,y:153,w:5,h:7},
+			52, {/*c4*/x:354,y:153,w:5,h:7},
+			53, {/*c5*/x:347,y:153,w:5,h:7},
+			54, {/*c6*/x:340,y:153,w:5,h:7},
+			55, {/*c7*/x:333,y:153,w:5,h:7},
+			56, {/*c8*/x:377,y:187,w:5,h:7},
+			57, {/*c9*/x:377,y:178,w:5,h:7},
+			58, {/*ccolon*/x:357,y:162,w:3,h:5},
+			33, {/*cexcl*/x:352,y:162,w:3,h:7},
+			63, {/*cquest*/x:377,y:160,w:5,h:7},
+			65, {/*cA*/x:384,y:187,w:5,h:7},
+			66, {/*cB*/x:391,y:187,w:5,h:7},
+			67, {/*cC*/x:405,y:187,w:5,h:7},
+			68, {/*cD*/x:398,y:187,w:5,h:7},
+			69, {/*cE*/x:405,y:178,w:5,h:7},
+			70, {/*cF*/x:398,y:178,w:5,h:7},
+			71, {/*cG*/x:391,y:178,w:5,h:7},
+			72, {/*cH*/x:384,y:178,w:5,h:7},
+			73, {/*cI*/x:405,y:169,w:5,h:7},
+			74, {/*cJ*/x:340,y:162,w:4,h:7},
+			75, {/*cK*/x:398,y:169,w:5,h:7},
+			76, {/*cL*/x:391,y:169,w:5,h:7},
+			77, {/*cM*/x:377,y:151,w:7,h:7},
+			78, {/*cN*/x:402,y:151,w:6,h:7},
+			79, {/*cO*/x:384,y:169,w:5,h:7},
+			80, {/*cP*/x:377,y:169,w:5,h:7},
+			81, {/*cQ*/x:394,y:151,w:6,h:7},
+			82, {/*cR*/x:405,y:160,w:5,h:7},
+			83, {/*cS*/x:398,y:160,w:5,h:7},
+			84, {/*cT*/x:391,y:160,w:5,h:7},
+			85, {/*cU*/x:384,y:160,w:5,h:7},
+			86, {/*cV*/x:404,y:142,w:7,h:7},
+			87, {/*cW*/x:395,y:142,w:7,h:7},
+			88, {/*cX*/x:386,y:142,w:7,h:7},
+			89, {/*cY*/x:377,y:142,w:7,h:7},
+			90, {/*cZ*/x:386,y:151,w:6,h:7},
 		],
 		positions = [],
 		xf = 1 / atlas.width,

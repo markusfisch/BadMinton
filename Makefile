@@ -15,8 +15,8 @@ live: $(ATLAS)
 
 $(ATLAS): $(SPRITES)
 	cd $(HTDOCS) && \
-		MAX_SIZE=256 \
-			MIN_SIZE=256 \
+		MAX_SIZE=2048 \
+			MIN_SIZE=2048 \
 			MARGIN=1 \
 			mkatlas ../$(SPRITES) | \
 		patchatlas index.html
