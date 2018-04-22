@@ -8,5 +8,5 @@ Monochrome Pong/Card mashup for [Ludum Dare][ldjam] #41
 Play it [here][here] or view [entry][entry].
 
 [ldjam]: http://ldjam.com
-[post]: http://hhsw.de/sites/ld41/
+[here]: http://hhsw.de/sites/ld41/
 [entry]: https://ldjam.com/events/ludum-dare/41/bad-minton
