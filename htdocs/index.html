@@ -118,7 +118,7 @@ function drawSprite(sprite, x, y, wm, hm) {
 	gl.vertexAttribPointer(texturePositionLoc, 2, gl.FLOAT, gl.FALSE, 0,
 		sprite.index << 5)
 
-	transformation[0] = transformation[8] = sprite.w * (wm || 1)
+	transformation[0] = sprite.w * (wm || 1)
 	transformation[4] = sprite.h * (hm || 1)
 
 	transformation[6] = x
@@ -175,9 +175,9 @@ function drawEntity(e, wx, wy) {
 	} else {
 		var speed = e.speed * factor
 		if (adx > speed) {
-			var pos = dx > 0
-			e.x += pos ? speed : -speed
-			e.direction = pos ? 1 : -1
+			var d = dx > 0
+			e.x += d ? speed : -speed
+			e.direction = d ? 1 : -1
 		} else {
 			e.x = e.tx
 		}
@@ -214,7 +214,19 @@ function initFrame() {
 	gl.uniform1i(textureLoc, 0)
 }
 
+function setTarget(e, x) {
+	var dx = x - e.tx,
+		d = dx*dx
+	if (d > e.speed) {
+		var max = sprites[PLANET].w * .93
+		e.tx = M.min(max, M.max(-max, x))
+	}
+}
+
 function input() {
+	if (pointersLength > 0) {
+		setTarget(player, player.x + pointersX[0])
+	}
 }
 
 function run() {
@@ -229,11 +241,11 @@ function run() {
 
 	var wx = player.x,
 		wy = player.y
-	drawSprite(sprites[PLANET], wx, wy, .5, .5)
+	drawSprite(sprites[PLANET], -wx, wy + scaleFactor * 120)
 	for (var i = 0; i < entitiesLength; ++i) {
-		drawEntity(entities[i], -wx, -wy)
+		drawEntity(entities[i], wx, wy)
 	}
-	drawText("WHERE IS IT?", 0, yMax * .5)
+	drawText("WHERE IS IT?", 0, scaleFactor * 120)
 }
 
 function pageXToGl(x) {
@@ -314,13 +326,13 @@ function createEntities() {
 			sprites[ASTRONAUT_MOVE2],
 			sprites[ASTRONAUT_MOVE3],
 		],
-		moveFreq: 400,
+		moveFreq: 100,
 		x: 0,
-		y: .5,
+		y: -yMax,
 		direction: 1,
 		tx: 0,
 		ty: 0,
-		speed: .02,
+		speed: scaleFactor * 5,
 	})
 
 	entitiesLength = entities.length
@@ -373,58 +385,60 @@ function resize() {
 	for (var id in sprites) {
 		scale(sprites[id])
 	}
+
+	createEntities()
 }
 
 function calculateSpriteRects() {
 	var res = [
-			PLANET, {/*planet*/x:1,y:1,w:278,h:198},
-			ASTRONAUT_IDLE0, {/*astronaut_idle0*/x:377,y:1,w:35,h:68},
-			ASTRONAUT_IDLE1, {/*astronaut_idle1*/x:377,y:71,w:33,h:69},
-			ASTRONAUT_MOVE0, {/*astronaut_move0*/x:281,y:1,w:50,h:69},
-			ASTRONAUT_MOVE1, {/*astronaut_move1*/x:333,y:78,w:42,h:73},
-			ASTRONAUT_MOVE2, {/*astronaut_move2*/x:333,y:1,w:42,h:75},
-			ASTRONAUT_MOVE3, {/*astronaut_move3*/x:281,y:72,w:47,h:70},
-			44, {/*ccomma*/x:362,y:162,w:3,h:4},
-			46, {/*cpoint*/x:405,y:196,w:3,h:3},
-			48, {/*c0*/x:333,y:162,w:5,h:7},
-			49, {/*c1*/x:346,y:162,w:4,h:7},
-			50, {/*c2*/x:368,y:153,w:5,h:7},
-			51, {/*c3*/x:361,y:153,w:5,h:7},
-			52, {/*c4*/x:354,y:153,w:5,h:7},
-			53, {/*c5*/x:347,y:153,w:5,h:7},
-			54, {/*c6*/x:340,y:153,w:5,h:7},
-			55, {/*c7*/x:333,y:153,w:5,h:7},
-			56, {/*c8*/x:377,y:187,w:5,h:7},
-			57, {/*c9*/x:377,y:178,w:5,h:7},
-			58, {/*ccolon*/x:357,y:162,w:3,h:5},
-			33, {/*cexcl*/x:352,y:162,w:3,h:7},
-			63, {/*cquest*/x:377,y:160,w:5,h:7},
-			65, {/*cA*/x:384,y:187,w:5,h:7},
-			66, {/*cB*/x:391,y:187,w:5,h:7},
-			67, {/*cC*/x:405,y:187,w:5,h:7},
-			68, {/*cD*/x:398,y:187,w:5,h:7},
-			69, {/*cE*/x:405,y:178,w:5,h:7},
-			70, {/*cF*/x:398,y:178,w:5,h:7},
-			71, {/*cG*/x:391,y:178,w:5,h:7},
-			72, {/*cH*/x:384,y:178,w:5,h:7},
-			73, {/*cI*/x:405,y:169,w:5,h:7},
-			74, {/*cJ*/x:340,y:162,w:4,h:7},
-			75, {/*cK*/x:398,y:169,w:5,h:7},
-			76, {/*cL*/x:391,y:169,w:5,h:7},
-			77, {/*cM*/x:377,y:151,w:7,h:7},
-			78, {/*cN*/x:402,y:151,w:6,h:7},
-			79, {/*cO*/x:384,y:169,w:5,h:7},
-			80, {/*cP*/x:377,y:169,w:5,h:7},
-			81, {/*cQ*/x:394,y:151,w:6,h:7},
-			82, {/*cR*/x:405,y:160,w:5,h:7},
-			83, {/*cS*/x:398,y:160,w:5,h:7},
-			84, {/*cT*/x:391,y:160,w:5,h:7},
-			85, {/*cU*/x:384,y:160,w:5,h:7},
-			86, {/*cV*/x:404,y:142,w:7,h:7},
-			87, {/*cW*/x:395,y:142,w:7,h:7},
-			88, {/*cX*/x:386,y:142,w:7,h:7},
-			89, {/*cY*/x:377,y:142,w:7,h:7},
-			90, {/*cZ*/x:386,y:151,w:6,h:7},
+			PLANET, {/*planet*/x:1,y:1,w:1715,h:291},
+			ASTRONAUT_IDLE0, {/*astronaut_idle0*/x:1770,y:76,w:35,h:68},
+			ASTRONAUT_IDLE1, {/*astronaut_idle1*/x:1770,y:146,w:33,h:69},
+			ASTRONAUT_MOVE0, {/*astronaut_move0*/x:1718,y:1,w:50,h:69},
+			ASTRONAUT_MOVE1, {/*astronaut_move1*/x:1770,y:1,w:42,h:73},
+			ASTRONAUT_MOVE2, {/*astronaut_move2*/x:1718,y:144,w:42,h:75},
+			ASTRONAUT_MOVE3, {/*astronaut_move3*/x:1718,y:72,w:47,h:70},
+			44, {/*ccomma*/x:1805,y:209,w:3,h:4},
+			46, {/*cpoint*/x:1808,y:244,w:3,h:3},
+			48, {/*c0*/x:1784,y:244,w:5,h:7},
+			49, {/*c1*/x:1797,y:244,w:4,h:7},
+			50, {/*c2*/x:1777,y:244,w:5,h:7},
+			51, {/*c3*/x:1770,y:244,w:5,h:7},
+			52, {/*c4*/x:1805,y:235,w:5,h:7},
+			53, {/*c5*/x:1798,y:235,w:5,h:7},
+			54, {/*c6*/x:1791,y:235,w:5,h:7},
+			55, {/*c7*/x:1784,y:235,w:5,h:7},
+			56, {/*c8*/x:1777,y:235,w:5,h:7},
+			57, {/*c9*/x:1770,y:235,w:5,h:7},
+			58, {/*ccolon*/x:1807,y:139,w:3,h:5},
+			33, {/*cexcl*/x:1803,y:244,w:3,h:7},
+			63, {/*cquest*/x:1807,y:76,w:5,h:7},
+			65, {/*cA*/x:1805,y:226,w:5,h:7},
+			66, {/*cB*/x:1798,y:226,w:5,h:7},
+			67, {/*cC*/x:1791,y:226,w:5,h:7},
+			68, {/*cD*/x:1784,y:226,w:5,h:7},
+			69, {/*cE*/x:1777,y:226,w:5,h:7},
+			70, {/*cF*/x:1770,y:226,w:5,h:7},
+			71, {/*cG*/x:1806,y:217,w:5,h:7},
+			72, {/*cH*/x:1799,y:217,w:5,h:7},
+			73, {/*cI*/x:1792,y:217,w:5,h:7},
+			74, {/*cJ*/x:1791,y:244,w:4,h:7},
+			75, {/*cK*/x:1785,y:217,w:5,h:7},
+			76, {/*cL*/x:1778,y:217,w:5,h:7},
+			77, {/*cM*/x:1805,y:182,w:7,h:7},
+			78, {/*cN*/x:1770,y:217,w:6,h:7},
+			79, {/*cO*/x:1807,y:130,w:5,h:7},
+			80, {/*cP*/x:1807,y:121,w:5,h:7},
+			81, {/*cQ*/x:1805,y:200,w:6,h:7},
+			82, {/*cR*/x:1807,y:112,w:5,h:7},
+			83, {/*cS*/x:1807,y:103,w:5,h:7},
+			84, {/*cT*/x:1807,y:94,w:5,h:7},
+			85, {/*cU*/x:1807,y:85,w:5,h:7},
+			86, {/*cV*/x:1805,y:173,w:7,h:7},
+			87, {/*cW*/x:1805,y:164,w:7,h:7},
+			88, {/*cX*/x:1805,y:155,w:7,h:7},
+			89, {/*cY*/x:1805,y:146,w:7,h:7},
+			90, {/*cZ*/x:1805,y:191,w:6,h:7},
 		],
 		positions = [],
 		xf = 1 / atlas.width,
@@ -528,7 +542,6 @@ function start() {
 
 	W.onresize = resize
 	resize()
-	createEntities()
 
 	D.onkeydown = keyDown
 	D.onkeyup = keyUp

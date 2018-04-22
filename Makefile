@@ -20,8 +20,3 @@ $(ATLAS): $(SPRITES)
 			MARGIN=1 \
 			mkatlas ../$(SPRITES) | \
 		patchatlas index.html
-	convert $(ATLAS) \
-		-background black \
-		-alpha Remove $(ATLAS) \
-		-compose Copy_Opacity \
-		-composite $(ATLAS)
