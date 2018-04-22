@@ -101,6 +101,8 @@ var M = Math,
 	baseLine,
 	horizon,
 	planetBase,
+	cardBase,
+	cardX,
 	letterSpacing,
 	spaceWidth,
 	playerRange,
@@ -117,6 +119,8 @@ var M = Math,
 	stars,
 	starsVx,
 	starsVy,
+	cardsLength,
+	cards,
 	pone,
 	ptwo,
 	ball,
@@ -171,6 +175,20 @@ function drawText(text, x, y) {
 	}
 }
 
+function drawCard(player) {
+	var since = now - player.playedCard,
+		up = player.y > 0 ? -1 : 1,
+		y = up > 0 ? cardBase : -cardBase
+	if (since < 500) {
+		var dy = up > 0 ? -.5 : .5
+		y += dy * since / 500
+	} else if (player.playedCard > 0) {
+		player.card = newCard()
+		player.playedCard = 0
+	}
+	drawSprite(player.card.sprite, cardX, y, 1, up)
+}
+
 function drawAstronaut() {
 	var sprite,
 		freq,
@@ -213,6 +231,7 @@ function drawAstronaut() {
 		e.last = now
 	}
 	drawSprite(sprite, e.x, e.y - (e.height - sprite.h), e.direction, e.up)
+	drawCard(e)
 }
 
 function drawStars() {
@@ -265,6 +284,22 @@ function moveTo(e, x) {
 	}
 }
 
+function newCard() {
+	return cards[(M.random() * cardsLength) | 0]
+}
+
+function playCard(player) {
+	if (now - player.playedCard < 500) {
+		return
+	}
+	player.card.play()
+	player.playedCard = now
+}
+
+function contains(rc, x, y) {
+	return x >= rc.l && x <= rc.r && y >= rc.t && y <= rc.b
+}
+
 function input() {
 	if (lost) {
 		if (pointersLength > 0 && now - ended > 1000) {
@@ -283,6 +318,13 @@ function input() {
 	for (var i = 0; i < pointersLength; ++i) {
 		var x = pointersX[i],
 			y = pointersY[i]
+		if (contains(pone.cardRect, x, y)) {
+			playCard(pone)
+			continue
+		} else if (!computer && contains(ptwo.cardRect, x, y)) {
+			playCard(ptwo)
+			continue
+		}
 		if (y < 0) {
 			moveTo(pone, x)
 		} else if (!computer) {
@@ -320,10 +362,10 @@ function run() {
 
 	if (!started) {
 		var y = yMax * .2
-		drawText("TAP HERE FOR 2 PLAYERS", 0, y)
-		drawText("TAP HERE FOR 1 PLAYER", 0, -y)
+		drawText('TAP HERE FOR 2 PLAYERS', 0, y)
+		drawText('TAP HERE FOR 1 PLAYER', 0, -y)
 	} else if (lost) {
-		drawText("PLAYER " + lost.name + " LOST", 0, 0)
+		drawText('PLAYER ' + lost.name + ' LOST', 0, 0)
 	}
 }
 
@@ -410,13 +452,30 @@ function createStars() {
 	starsVy = .0001 + M.random() * .0005
 }
 
+function newBallVx() {
+	return (scaleFactor + M.random() * scaleFactor * 2) *
+		(M.random() > .5 ? 1 : -1)
+}
+
+function getCardRect(x, y) {
+	var card = cards[0],
+		w = card.sprite.w,
+		h = card.sprite.h
+	return {
+		l: x - w,
+		t: y - h,
+		r: x + w,
+		b: y + h
+	}
+}
+
 function createEntities() {
 	var astronautSpeed = scaleFactor * 6
 
 	entities = []
 
 	entities.push(pone = {
-		name: "ONE",
+		name: 'ONE',
 		idle: [
 			sprites[ASTRONAUT_IDLE0],
 			sprites[ASTRONAUT_IDLE1],
@@ -441,11 +500,13 @@ function createEntities() {
 		tx: 0,
 		ty: baseLine,
 		speed: astronautSpeed,
-		draw: drawAstronaut
+		draw: drawAstronaut,
+		card: newCard(),
+		cardRect: getCardRect(cardX, cardBase)
 	})
 
 	entities.push(ptwo = {
-		name: "TWO",
+		name: 'TWO',
 		idle: [
 			sprites[ASTRONAUT_IDLE0],
 			sprites[ASTRONAUT_IDLE1],
@@ -470,15 +531,16 @@ function createEntities() {
 		tx: 0,
 		ty: -baseLine,
 		speed: astronautSpeed,
-		draw: drawAstronaut
+		draw: drawAstronaut,
+		card: newCard(),
+		cardRect: getCardRect(cardX, -cardBase)
 	})
 
 	entities.push(ball = {
 		sprite: sprites[65],
 		x: 0,
 		y: baseLine,
-		vx: (scaleFactor + M.random() * scaleFactor * 2) *
-			(M.random() > .5 ? 1 : -1),
+		vx: newBallVx(),
 		vy: scaleFactor * 5,
 		draw: function() {
 			if (!started) {
@@ -526,14 +588,51 @@ function createEntities() {
 		e.height = getMaxHeightFromSets([e.idle, e.move, e.catching])
 		e.frame = 0
 		e.last = 0
+		e.playedCard = 0
 	}
+}
+
+function createCards() {
+	cards = []
+	cards.push({
+		name: 'INCREASE SPEED',
+		sprite: sprites[ASTRONAUT_MOVE0],
+		play: function() {
+			ball.vx *= 1.3
+			ball.vy *= 1.3
+		}
+	})
+	cards.push({
+		name: 'DECREASE SPEED',
+		sprite: sprites[ASTRONAUT_MOVE1],
+		play: function() {
+			ball.vx *= .5
+			ball.vy *= .5
+		}
+	})
+	cards.push({
+		name: 'NEW DIRECTION',
+		sprite: sprites[ASTRONAUT_MOVE2],
+		play: function() {
+			ball.vx = newBallVx()
+		}
+	})
+	cards.push({
+		name: 'REVERSE',
+		sprite: sprites[ASTRONAUT_MOVE3],
+		play: function() {
+			ball.vy = -ball.vy
+		}
+	})
+	cardsLength = cards.length
 }
 
 function scale(sprite) {
 	var size = sprite.size * scaleFactor
 	sprite.w = size
-	sprite.ww = size * 2
+	sprite.ww = sprite.w * 2
 	sprite.h = size * sprite.aspect
+	sprite.hh = sprite.h * 2
 }
 
 function resize() {
@@ -552,6 +651,8 @@ function resize() {
 	scaleFactor = yMax / max
 	baseLine = scaleFactor * -(max - 100)
 	planetBase = baseLine + scaleFactor * 120
+	cardX = .9
+	cardBase = planetBase
 
 	perspective = new FA([
 		1, 0, 0,
@@ -573,6 +674,7 @@ function resize() {
 	playerRange = sprites[ASTRONAUT_IDLE0].w * 1.5
 	started = ended = lost = null
 
+	createCards()
 	createEntities()
 	createStars()
 }
