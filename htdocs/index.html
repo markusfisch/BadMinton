@@ -98,8 +98,12 @@ var M = Math,
 	halfHeight,
 	yMax,
 	scaleFactor,
+	baseLine,
+	horizon,
+	planetBase,
 	letterSpacing,
 	spaceWidth,
+	playerRange,
 	now,
 	factor,
 	last,
@@ -109,7 +113,17 @@ var M = Math,
 	keysDown = [],
 	entitiesLength,
 	entities,
-	player
+	starsLength = 100,
+	stars,
+	starsVx,
+	starsVy,
+	pone,
+	ptwo,
+	ball,
+	started,
+	ended,
+	lost,
+	computer
 
 M.TAU = M.TAU || M.PI * 2
 M.PI2 = M.PI2 || M.PI / 2
@@ -136,8 +150,7 @@ function measureText(text) {
 		if (c == 32) {
 			width += spaceWidth
 		} else {
-			var sprite = sprites[c]
-			width += sprite.w + letterSpacing
+			width += sprites[c].ww + letterSpacing
 		}
 	}
 	return width - (width > 0 ? letterSpacing : 0)
@@ -153,53 +166,82 @@ function drawText(text, x, y) {
 		} else {
 			var sprite = sprites[c]
 			drawSprite(sprite, x, y)
-			x += sprite.w + letterSpacing
+			x += sprite.ww + letterSpacing
 		}
 	}
 }
 
-function drawEntity(e, wx, wy) {
+function drawAstronaut() {
 	var sprite,
 		freq,
 		frames,
-		dx = e.tx - e.x,
-		dy = e.ty - e.y,
-		adx = M.abs(dx),
-		ady = M.abs(dy)
-	if (adx < .001 && ady < .001) {
-		frames = e.idleLength
-		sprite = e.idle[e.frame % frames]
-		freq = e.idleFreq
-		if (e.finished) {
-			e.finished()
-		}
+		e = this
+	if (now - e.catched < 200) {
+		frames = e.catchingLength
+		sprite = e.catching[e.frame % frames]
+		freq = e.catchingFreq
 	} else {
-		var speed = e.speed * factor
-		if (adx > speed) {
-			var d = dx > 0
-			e.x += d ? speed : -speed
-			e.direction = d ? 1 : -1
+		var dx = e.tx - e.x,
+			dy = e.ty - e.y,
+			adx = M.abs(dx),
+			ady = M.abs(dy)
+		if (adx < .001 && ady < .001) {
+			frames = e.idleLength
+			sprite = e.idle[e.frame % frames]
+			freq = e.idleFreq
 		} else {
-			e.x = e.tx
-		}
-		if (ady > speed) {
-			e.y += dy > 0 ? speed : -speed
-		} else {
-			e.y = e.ty
-		}
-		frames = e.moveLength
-		sprite = e.move[e.frame % frames]
-		freq = e.moveFreq
-		if (e.moved) {
-			e.moved()
+			var speed = e.speed * factor
+			if (adx > speed) {
+				var d = dx > 0
+				e.x += d ? speed : -speed
+				e.direction = d ? 1 : -1
+			} else {
+				e.x = e.tx
+			}
+			if (ady > speed) {
+				e.y += dy > 0 ? speed : -speed
+			} else {
+				e.y = e.ty
+			}
+			frames = e.moveLength
+			sprite = e.move[e.frame % frames]
+			freq = e.moveFreq
 		}
 	}
-	if (frames > 0 && now - e.last > freq) {
-		++e.frame
+	if (frames > 1 && now - e.last > freq) {
+		e.frame = (e.frame + 1) % frames
 		e.last = now
 	}
-	drawSprite(sprite, e.x - wx, e.y - (e.height - sprite.h) - wy,
-		e.direction)
+	drawSprite(sprite, e.x, e.y - (e.height - sprite.h), e.direction, e.up)
+}
+
+function drawStars() {
+	for (var i = 0; i < starsLength; ++i) {
+		var star = stars[i],
+			x = star.x,
+			y = star.y
+		drawSprite(sprites[66], x, y)
+		x += starsVx
+		y += starsVy
+		if (x > 1 || x < -1 || y > yMax || y < -yMax) {
+			var p = 0,
+				w = 2,
+				h = yMax * 2,
+				range = w + h
+
+			p += range * M.random()
+
+			if (p > w) {
+				x = starsVx > 0 ? -1 : 1
+				y = p - w - yMax
+			} else {
+				x = p - 1
+				y = starsVy > 0 ? -yMax : yMax
+			}
+		}
+		star.x = x
+		star.y = y
+	}
 }
 
 function initFrame() {
@@ -215,18 +257,47 @@ function initFrame() {
 	gl.uniform1i(textureLoc, 0)
 }
 
-function setTarget(e, x) {
+function moveTo(e, x) {
 	var dx = x - e.tx,
 		d = dx*dx
-	if (d > e.speed) {
-		var max = sprites[PLANET].w * .93
-		e.tx = M.min(max, M.max(-max, x))
+	if (d > e.speed / 2) {
+		e.tx = M.min(horizon, M.max(-horizon, x))
 	}
 }
 
 function input() {
-	if (pointersLength > 0) {
-		setTarget(player, player.x + pointersX[0])
+	if (lost) {
+		if (pointersLength > 0 && now - ended > 1000) {
+			resize()
+		}
+		return
+	}
+	if (!started) {
+		if (M.abs(pone.x) < playerRange && pointersLength > 0) {
+			computer = pointersY[0] < 0
+			started = now
+			ball.x = pone.x
+		}
+		return
+	}
+	for (var i = 0; i < pointersLength; ++i) {
+		var x = pointersX[i],
+			y = pointersY[i]
+		if (y < 0) {
+			moveTo(pone, x)
+		} else if (!computer) {
+			moveTo(ptwo, x)
+		}
+	}
+	if (computer && ball.vy > 0) {
+		var px = ptwo.x,
+			bx = ball.x,
+			by = ball.y,
+			d = M.abs(baseLine) - by
+		bx += ball.vx * d
+		if (M.abs(ptwo.x - bx) > playerRange) {
+			ptwo.tx = bx
+		}
 	}
 }
 
@@ -240,13 +311,20 @@ function run() {
 	input()
 	initFrame()
 
-	var wx = player.x,
-		wy = player.y
-	drawSprite(sprites[PLANET], -wx, wy + scaleFactor * 120)
+	drawStars()
+	drawSprite(sprites[PLANET], 0, planetBase)
+	drawSprite(sprites[PLANET], 0, -planetBase, 1, -1)
 	for (var i = 0; i < entitiesLength; ++i) {
-		drawEntity(entities[i], wx, wy)
+		entities[i].draw()
 	}
-	drawText("WHERE IS IT?", 0, scaleFactor * 120)
+
+	if (!started) {
+		var y = yMax * .2
+		drawText("TAP HERE FOR 2 PLAYERS", 0, y)
+		drawText("TAP HERE FOR 1 PLAYER", 0, -y)
+	} else if (lost) {
+		drawText("PLAYER " + lost.name + " LOST", 0, 0)
+	}
 }
 
 function pageXToGl(x) {
@@ -312,10 +390,33 @@ function getMaxHeight(sprites) {
 	return max
 }
 
+function getMaxHeightFromSets(sets) {
+	var max = 0
+	for (var i = sets.length; i-- > 0;) {
+		max = M.max(max, getMaxHeight(sets[i]))
+	}
+	return max
+}
+
+function createStars() {
+	stars = []
+	for (var i = 0; i < starsLength; ++i) {
+		stars.push({
+			x: Math.random() * 2 - 1,
+			y: Math.random() * yMax * 2 - yMax
+		})
+	}
+	starsVx = .0001 + M.random() * .0005
+	starsVy = .0001 + M.random() * .0005
+}
+
 function createEntities() {
+	var astronautSpeed = scaleFactor * 6
+
 	entities = []
 
-	entities.push(player = {
+	entities.push(pone = {
+		name: "ONE",
 		idle: [
 			sprites[ASTRONAUT_IDLE0],
 			sprites[ASTRONAUT_IDLE1],
@@ -328,12 +429,89 @@ function createEntities() {
 			sprites[ASTRONAUT_MOVE3],
 		],
 		moveFreq: 100,
-		x: 0,
-		y: -yMax,
+		catching: [
+			sprites[ASTRONAUT_MOVE0],
+			sprites[ASTRONAUT_MOVE1],
+		],
+		catchingFreq: 50,
+		x: horizon,
+		y: baseLine,
 		direction: 1,
+		up: 1,
 		tx: 0,
-		ty: 0,
-		speed: scaleFactor * 5,
+		ty: baseLine,
+		speed: astronautSpeed,
+		draw: drawAstronaut
+	})
+
+	entities.push(ptwo = {
+		name: "TWO",
+		idle: [
+			sprites[ASTRONAUT_IDLE0],
+			sprites[ASTRONAUT_IDLE1],
+		],
+		idleFreq: 2000,
+		move: [
+			sprites[ASTRONAUT_MOVE0],
+			sprites[ASTRONAUT_MOVE1],
+			sprites[ASTRONAUT_MOVE2],
+			sprites[ASTRONAUT_MOVE3],
+		],
+		moveFreq: 100,
+		catching: [
+			sprites[ASTRONAUT_MOVE0],
+			sprites[ASTRONAUT_MOVE1],
+		],
+		catchingFreq: 50,
+		x: -horizon,
+		y: -baseLine,
+		direction: 1,
+		up: -1,
+		tx: 0,
+		ty: -baseLine,
+		speed: astronautSpeed,
+		draw: drawAstronaut
+	})
+
+	entities.push(ball = {
+		sprite: sprites[65],
+		x: 0,
+		y: baseLine,
+		vx: (scaleFactor + M.random() * scaleFactor * 2) *
+			(M.random() > .5 ? 1 : -1),
+		vy: scaleFactor * 5,
+		draw: function() {
+			if (!started) {
+				return
+			}
+			var x = this.x,
+				y = this.y
+			x += this.vx * factor
+			y += this.vy * factor
+			if (!lost) {
+				if (y < baseLine || y > -baseLine) {
+					var player = y < baseLine ? pone : ptwo
+					if (M.abs(player.x - x) < playerRange) {
+						this.vy = -this.vy
+						this.vy *= 1.05
+						var d = player.tx - player.x
+						if (M.abs(d) > .001) {
+							this.vx += player.speed * (d > 0 ? -.2 : .2)
+						}
+						player.catched = now
+					} else {
+						lost = player
+						ended = now
+					}
+				}
+				if (x > horizon || x < -horizon) {
+					this.vx = -this.vx
+				}
+			}
+			this.x = x
+			this.y = y
+			drawSprite(this.sprite, x, y)
+		}
 	})
 
 	entitiesLength = entities.length
@@ -344,7 +522,8 @@ function createEntities() {
 		e.ty = typeof e.ty === 'undefined' ? e.y : e.ty
 		e.idleLength = e.idle ? e.idle.length : 0
 		e.moveLength = e.move ? e.move.length : 0
-		e.height = M.max(getMaxHeight(e.idle), getMaxHeight(e.move))
+		e.catchingLength = e.catching ? e.catching.length : 0
+		e.height = getMaxHeightFromSets([e.idle, e.move, e.catching])
 		e.frame = 0
 		e.last = 0
 	}
@@ -353,6 +532,7 @@ function createEntities() {
 function scale(sprite) {
 	var size = sprite.size * scaleFactor
 	sprite.w = size
+	sprite.ww = size * 2
 	sprite.h = size * sprite.aspect
 }
 
@@ -368,10 +548,10 @@ function resize() {
 	gl.canvas.height = height
 	gl.viewport(0, 0, width, height)
 
-	var ref = sprites[ASTRONAUT_IDLE0].size * 5
-	scaleFactor = .45 / halfWidth * M.min(width / ref, height / ref)
-	letterSpacing = scaleFactor * 5
-	spaceWidth = scaleFactor * 10
+	var max = 500
+	scaleFactor = yMax / max
+	baseLine = scaleFactor * -(max - 100)
+	planetBase = baseLine + scaleFactor * 120
 
 	perspective = new FA([
 		1, 0, 0,
@@ -387,7 +567,14 @@ function resize() {
 		scale(sprites[id])
 	}
 
+	horizon = M.min(1, sprites[PLANET].w)
+	spaceWidth = sprites[87].w
+	letterSpacing = spaceWidth * -.05
+	playerRange = sprites[ASTRONAUT_IDLE0].w * 1.5
+	started = ended = lost = null
+
 	createEntities()
+	createStars()
 }
 
 function calculateSpriteRects() {
@@ -461,7 +648,7 @@ function calculateSpriteRects() {
 		sprites[id] = {
 			index: index++,
 			aspect: h / w,
-			size: w
+			size: id < 100 ? w * 3 : w
 		}
 
 		/* TRIANGLE_STRIP order:
