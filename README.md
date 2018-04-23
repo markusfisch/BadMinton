@@ -11,5 +11,5 @@ played on a mobile unless you have two mice on your desktop :)
 Play it [here][here] or view [entry][entry].
 
 [ldjam]: http://ldjam.com
-[here]: http://hhsw.de/sites/proto/ld41/
+[here]: http://hhsw.de/sites/BadMinton
 [entry]: https://ldjam.com/events/ludum-dare/41/bad-minton
