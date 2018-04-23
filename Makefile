@@ -1,7 +1,7 @@
 HTDOCS = htdocs
 ATLAS = $(HTDOCS)/atlas.png
 SPRITES = sprites/*
-WEBROOT = hhsw.de@ssh.strato.de:sites/proto/ld41
+WEBROOT = hhsw.de@ssh.strato.de:sites/BadMinton
 OPTIONS = \
 	--recursive \
 	--links \
