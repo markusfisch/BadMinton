@@ -613,8 +613,10 @@ function createCards() {
 	cards.push({
 		sprite: sprites[CARD_MINUS],
 		play: function() {
-			ball.vx *= .5
-			ball.vy *= .5
+			if (M.abs(ball.vy) > scaleFactor) {
+				ball.vx *= .5
+				ball.vy *= .5
+			}
 		}
 	})
 	cards.push({
