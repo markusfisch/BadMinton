@@ -127,6 +127,7 @@ var M = Math,
 	stars,
 	starsVx,
 	starsVy,
+	cardFreq = 1000,
 	cardsLength,
 	cards,
 	pone,
@@ -187,10 +188,10 @@ function drawCard(player) {
 	var since = now - player.playedCard,
 		up = player.y > 0 ? -1 : 1,
 		y = up > 0 ? cardBase : -cardBase
-	if (since < 500) {
+	if (since < cardFreq) {
 		var drop = yMax - cardBase,
 			dy = up > 0 ? -drop : drop
-		y += dy * since / 500
+		y += dy * since / cardFreq
 	} else if (player.playedCard > 0) {
 		player.card = newCard()
 		player.playedCard = 0
@@ -299,7 +300,7 @@ function newCard() {
 }
 
 function playCard(player) {
-	if (now - player.playedCard < 500) {
+	if (now - player.playedCard < cardFreq) {
 		return
 	}
 	player.card.play()
