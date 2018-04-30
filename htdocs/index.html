@@ -183,6 +183,10 @@ function drawText(text, x, y) {
 	}
 }
 
+function newCard() {
+	return cards[(M.random() * cardsLength) | 0]
+}
+
 function drawCard(player) {
 	var since = now - player.playedCard,
 		up = player.y > 0 ? -1 : 1,
@@ -294,18 +298,6 @@ function moveTo(e, x) {
 	}
 }
 
-function newCard() {
-	return cards[(M.random() * cardsLength) | 0]
-}
-
-function playCard(player) {
-	if (now - player.playedCard < cardFreq) {
-		return
-	}
-	player.card.play()
-	player.playedCard = now
-}
-
 function contains(rc, x, y) {
 	return x >= rc.l && x <= rc.r && y >= rc.t && y <= rc.b
 }
@@ -329,11 +321,8 @@ function input() {
 	for (var i = 0; i < pointersLength; ++i) {
 		var x = pointersX[i],
 			y = pointersY[i]
-		if (contains(pone.cardRect, x, y)) {
-			playCard(pone)
-			continue
-		} else if (!computer && contains(ptwo.cardRect, x, y)) {
-			playCard(ptwo)
+		if (contains(pone.cardRect, x, y) ||
+				(!computer && contains(ptwo.cardRect, x, y))) {
 			continue
 		}
 		if (y < 0) {
@@ -408,7 +397,24 @@ function setPointer(event, down) {
 	event.stopPropagation()
 }
 
+function playCard(player) {
+	if (now - player.playedCard < cardFreq) {
+		return
+	}
+	player.card.play()
+	player.playedCard = now
+}
+
 function pointerUp(event) {
+	for (var i = 0; i < pointersLength; ++i) {
+		var x = pointersX[i],
+			y = pointersY[i]
+		if (contains(pone.cardRect, x, y)) {
+			playCard(pone)
+		} else if (!computer && contains(ptwo.cardRect, x, y)) {
+			playCard(ptwo)
+		}
+	}
 	setPointer(event, false)
 }
 
