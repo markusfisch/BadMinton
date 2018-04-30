@@ -607,26 +607,23 @@ function createEntities() {
 }
 
 function createCards() {
-	cards = []
-	cards.push({
+	cards = [{
 		sprite: sprites[CARD_PLUS],
 		play: function() {
 			ball.vx *= 1.3
 			ball.vy *= 1.3
 		}
-	})
-	cards.push({
+	}, {
 		sprite: sprites[CARD_JIGGLE],
 		play: function() {
 			ball.vx = ball.vx * -1.5
 		}
-	})
-	cards.push({
+	}, {
 		sprite: sprites[CARD_REVERSE],
 		play: function() {
 			ball.vy = -ball.vy
 		}
-	})
+	}]
 	cardsLength = cards.length
 }
 
