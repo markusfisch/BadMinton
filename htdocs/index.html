@@ -162,7 +162,7 @@ function measureText(text) {
 		if (c == 32) {
 			width += spaceWidth
 		} else {
-			width += sprites[c].ww + letterSpacing
+			width += sprites[c].w * 2 + letterSpacing
 		}
 	}
 	return width - (width > 0 ? letterSpacing : 0)
@@ -177,8 +177,9 @@ function drawText(text, x, y) {
 			x += spaceWidth
 		} else {
 			var sprite = sprites[c]
+			x += sprite.w
 			drawSprite(sprite, x, y)
-			x += sprite.ww + letterSpacing
+			x += sprite.w + letterSpacing
 		}
 	}
 }
@@ -630,9 +631,7 @@ function createCards() {
 function scale(sprite) {
 	var size = sprite.size * scaleFactor
 	sprite.w = size
-	sprite.ww = sprite.w * 2
 	sprite.h = size * sprite.aspect
-	sprite.hh = sprite.h * 2
 }
 
 function resize() {
