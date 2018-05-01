@@ -617,7 +617,13 @@ function createCards() {
 	}, {
 		sprite: sprites[CARD_DISTRACT],
 		play: function() {
-			ball.vx *= -1.5
+			var vx = ball.vx,
+				mx = .015
+			if (M.abs(vx) > mx) {
+				return
+			}
+			mx = M.min(.006, mx - vx)
+			ball.vx += vx < 0 ? mx : -mx
 		}
 	}, {
 		sprite: sprites[CARD_REVERSE],
