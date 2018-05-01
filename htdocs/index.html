@@ -571,10 +571,6 @@ function createEntities() {
 					if (M.abs(player.x - x) < playerRange) {
 						this.vy = -this.vy
 						this.vy *= 1.05
-						var d = player.tx - player.x
-						if (M.abs(d) > .001) {
-							this.vx += player.speed * (d > 0 ? -.2 : .2)
-						}
 						player.catched = now
 					} else {
 						lost = player
