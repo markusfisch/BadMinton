@@ -619,7 +619,7 @@ function createCards() {
 				return
 			}
 			mx = M.min(.006, mx - vx)
-			ball.vx += vx < 0 ? mx : -mx
+			ball.vx += ball.x < 0 ? mx : -mx
 		}
 	}, {
 		sprite: sprites[CARD_REVERSE],
