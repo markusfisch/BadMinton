@@ -423,9 +423,9 @@ function pointerUp(event) {
 }
 
 function pointerMove(event) {
-	// prevents pinch to zoom on iOS 10+
-	if (event.scale !== 1) {
-		event.preventDefault();
+	// prevent pinch/zoom on iOS 10
+	if (event.scale > 1) {
+		event.preventDefault()
 	}
 	setPointer(event, pointersLength)
 }
@@ -862,6 +862,17 @@ function start() {
 		D.ontouchend = pointerUp
 		D.ontouchleave = pointerUp
 		D.ontouchcancel = pointerUp
+
+		// prevent pinch/zoom on iOS 11
+		D.addEventListener('gesturestart', function(event) {
+			event.preventDefault()
+		}, false)
+		D.addEventListener('gesturechange', function(event) {
+			event.preventDefault()
+		}, false)
+		D.addEventListener('gestureend', function(event) {
+			event.preventDefault()
+		}, false)
 	}
 
 	last = Date.now() - 16
