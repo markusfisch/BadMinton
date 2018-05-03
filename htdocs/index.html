@@ -621,11 +621,11 @@ function createCards() {
 		sprite: sprites[CARD_DISTRACT],
 		play: function() {
 			var vx = ball.vx,
-				mx = .015
+				mx = .015 * yMax
 			if (M.abs(vx) > mx) {
 				return
 			}
-			mx = M.min(.006, mx - vx)
+			mx = M.min(.006 * yMax, mx - vx)
 			ball.vx += ball.x < 0 ? mx : -mx
 		}
 	}, {
