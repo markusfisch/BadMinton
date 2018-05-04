@@ -169,8 +169,10 @@ function measureText(text) {
 	return width - (width > 0 ? letterSpacing : 0)
 }
 
-function drawText(text, x, y) {
-	var width = measureText(text)
+function drawCenterText(text, x, y) {
+	var width = measureText(text),
+		base = now * .005,
+		intensity = .01 * yMax
 	x -= width / 2
 	for (var i = 0, len = text.length; i < len; ++i) {
 		var c = text.charCodeAt(i)
@@ -179,7 +181,7 @@ function drawText(text, x, y) {
 		} else {
 			var sprite = sprites[c]
 			x += sprite.w
-			drawSprite(sprite, x, y)
+			drawSprite(sprite, x, y + M.sin(base + i) * intensity)
 			x += sprite.w + letterSpacing
 		}
 	}
@@ -364,10 +366,10 @@ function run() {
 
 	if (!started) {
 		var y = yMax * .2
-		drawText('TAP HERE FOR 2 PLAYERS', 0, y)
-		drawText('TAP HERE FOR 1 PLAYER', 0, -y)
+		drawCenterText('TAP HERE FOR 2 PLAYERS', 0, y)
+		drawCenterText('TAP HERE FOR 1 PLAYER', 0, -y)
 	} else if (lost) {
-		drawText('PLAYER ' + lost.name + ' LOST', 0, 0)
+		drawCenterText('PLAYER ' + lost.name + ' LOST', 0, 0)
 	}
 }
 
