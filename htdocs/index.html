@@ -188,7 +188,13 @@ function drawCenterText(text, x, y) {
 }
 
 function newCard() {
-	return cards[(M.random() * cardsLength) | 0]
+	var p1 = pone ? pone.card : -1,
+		p2 = ptwo ? ptwo.card : -1,
+		idx
+	do {
+		idx = (M.random() * cardsLength) | 0
+	} while (idx === p1 || idx == p2)
+	return cards[idx]
 }
 
 function drawCard(player) {
