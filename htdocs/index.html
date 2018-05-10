@@ -115,6 +115,8 @@ var M = Math,
 	planetBase,
 	cardBase,
 	cardX,
+	scoreBase,
+	scoreX,
 	letterSpacing,
 	spaceWidth,
 	playerRange,
@@ -139,7 +141,9 @@ var M = Math,
 	ball,
 	started,
 	ended,
-	lost,
+	serve,
+	missed,
+	looser,
 	computer
 
 function drawSprite(sprite, x, y, wm, hm) {
@@ -155,6 +159,23 @@ function drawSprite(sprite, x, y, wm, hm) {
 
 	gl.uniformMatrix3fv(transformationLoc, gl.FALSE, transformation)
 	gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+}
+
+function drawScore(text, x, y) {
+	var dir = y < 0 ? 1 : -1
+	text += ''
+	for (var len = text.length, i = dir > 0 ? 0 : len - 1;
+			len-- > 0; i += dir) {
+		var c = text.charCodeAt(i)
+		if (c == 32) {
+			x += spaceWidth
+		} else {
+			var sprite = sprites[c]
+			x += sprite.w
+			drawSprite(sprite, x, y, dir, dir)
+			x += sprite.w + letterSpacing
+		}
+	}
 }
 
 function measureText(text) {
@@ -313,8 +334,8 @@ function contains(rc, x, y) {
 }
 
 function input() {
-	if (lost) {
-		if (pointersLength > 0 && now - ended > 1000) {
+	if (looser) {
+		if (pointersLength > 0 && now - ended > 3000) {
 			resize()
 		}
 		return
@@ -326,6 +347,9 @@ function input() {
 			pone.catched = now
 			ball.x = pone.x
 		}
+		return
+	}
+	if (now < serve) {
 		return
 	}
 	for (var i = 0; i < pointersLength; ++i) {
@@ -341,14 +365,14 @@ function input() {
 			moveTo(ptwo, x)
 		}
 	}
-	if (computer && ball.vy > 0) {
+	if (computer && ball.vy > 0 && !missed) {
 		var px = ptwo.x,
 			bx = ball.x,
 			by = ball.y,
 			d = M.abs(baseLine) - by
 		bx += ball.vx * d
 		if (M.abs(ptwo.x - bx) > playerRange) {
-			ptwo.tx = bx
+			ptwo.tx = M.max(-horizon, M.min(horizon, bx))
 		}
 	}
 }
@@ -371,12 +395,17 @@ function run() {
 		entities[i].draw()
 	}
 
+	drawScore(pone.score, scoreX, scoreBase)
+	drawScore(ptwo.score, scoreX, -scoreBase)
+
 	if (!started) {
 		var y = yMax * .2
 		drawCenterText('TAP HERE FOR 2 PLAYERS', 0, y)
 		drawCenterText('TAP HERE FOR 1 PLAYER', 0, -y)
-	} else if (lost) {
-		drawCenterText('PLAYER ' + lost.name + ' LOST', 0, 0)
+	} else if (looser) {
+		drawCenterText('PLAYER ' + looser.name + ' LOST', 0, 0)
+	} else if (missed) {
+		drawCenterText('PLAYER ' + missed.name + ' MISSED', 0, 0)
 	}
 }
 
@@ -415,6 +444,10 @@ function playCard(player) {
 	player.playedCard = now
 }
 
+function pointerCancel(event) {
+	setPointer(event, false)
+}
+
 function pointerUp(event) {
 	for (var i = 0; i < pointersLength; ++i) {
 		var x = pointersX[i],
@@ -426,6 +459,11 @@ function pointerUp(event) {
 		}
 	}
 	setPointer(event, false)
+	if (missed && serve < now) {
+		ball.stroke(missed)
+		missed.catched = now
+		missed = null
+	}
 }
 
 function pointerMove(event) {
@@ -504,6 +542,7 @@ function createEntities() {
 
 	entities.push(pone = {
 		name: 'ONE',
+		score: 0,
 		idle: [
 			sprites[ASTRONAUT_IDLE0],
 			sprites[ASTRONAUT_IDLE1],
@@ -535,6 +574,7 @@ function createEntities() {
 
 	entities.push(ptwo = {
 		name: 'TWO',
+		score: 0,
 		idle: [
 			sprites[ASTRONAUT_IDLE0],
 			sprites[ASTRONAUT_IDLE1],
@@ -568,9 +608,16 @@ function createEntities() {
 		sprite: sprites[BALL],
 		x: 0,
 		y: baseLine,
-		vx: (scaleFactor + M.random() * scaleFactor * 2) *
-			(M.random() > .5 ? 1 : -1),
-		vy: scaleFactor * 5,
+		vx: 0,
+		vy: 0,
+		stroke: function(player) {
+			var rev = player === pone ? 1 : -1
+			this.x = player.x
+			this.y = baseLine * rev
+			this.vx = (scaleFactor + M.random() * scaleFactor * 2) *
+					(M.random() > .5 ? 1 : -1)
+			this.vy = scaleFactor * 5 * rev
+		},
 		draw: function() {
 			if (!started) {
 				return
@@ -579,16 +626,30 @@ function createEntities() {
 				y = this.y
 			x += this.vx * factor
 			y += this.vy * factor
-			if (!lost) {
+			if (!missed && !looser) {
 				if (y < baseLine || y > -baseLine) {
-					var player = y < baseLine ? pone : ptwo
-					if (M.abs(player.x - x) < playerRange) {
+					var shooter, defender
+					if (y < 0) {
+						defender = pone
+						shooter = ptwo
+					} else {
+						shooter = pone
+						defender = ptwo
+					}
+					if (M.abs(defender.x - x) < playerRange) {
 						this.vy = -this.vy
 						this.vy *= 1.05
-						player.catched = now
-					} else {
-						lost = player
-						ended = now
+						defender.catched = now
+					} else if (missed !== defender) {
+						if (++shooter.score >= 21) {
+							looser = defender
+							ended = now
+						} else {
+							moveTo(shooter, 0)
+							moveTo(defender, 0)
+						}
+						missed = defender
+						serve = now + 1000
 					}
 				}
 				if (x > horizon || x < -horizon) {
@@ -600,6 +661,7 @@ function createEntities() {
 			drawSprite(this.sprite, x, y)
 		}
 	})
+	ball.stroke(pone)
 
 	entitiesLength = entities.length
 
@@ -669,12 +731,6 @@ function resize() {
 	gl.canvas.height = height
 	gl.viewport(0, 0, width, height)
 
-	var max = 500
-	scaleFactor = yMax / max
-	baseLine = scaleFactor * -(max - 100)
-	planetBase = baseLine - scaleFactor * 72
-	cardBase = baseLine + scaleFactor * 200
-
 	perspective = new FA([
 		1, 0, 0,
 		0, width / height, 0,
@@ -685,16 +741,24 @@ function resize() {
 		0, 1, 0,
 		0, 0, 1])
 
+	var max = 500
+	scaleFactor = yMax / max
+	baseLine = scaleFactor * -(max - 100)
+	planetBase = baseLine - scaleFactor * 72
+	cardBase = baseLine + scaleFactor * 200
+
 	for (var id in sprites) {
 		scale(sprites[id])
 	}
 
 	horizon = M.min(1, sprites[PLANET].w * .9)
 	cardX = horizon - sprites[CARD_PLUS].w * 1.5
+	scoreBase = cardBase + sprites[CARD_PLUS].h * 1.5
+	scoreX = cardX
 	spaceWidth = sprites[87].w
 	letterSpacing = spaceWidth * -.05
 	playerRange = sprites[ASTRONAUT_IDLE0].w * 1.5
-	started = ended = lost = null
+	started = ended = missed = serve = looser = null
 
 	createCards()
 	createEntities()
@@ -869,14 +933,14 @@ function start() {
 	D.onmousedown = pointerDown
 	D.onmousemove = pointerMove
 	D.onmouseup = pointerUp
-	D.onmouseout = pointerUp
+	D.onmouseout = pointerCancel
 
 	if ('ontouchstart' in D) {
 		D.ontouchstart = pointerDown
 		D.ontouchmove = pointerMove
 		D.ontouchend = pointerUp
-		D.ontouchleave = pointerUp
-		D.ontouchcancel = pointerUp
+		D.ontouchleave = pointerCancel
+		D.ontouchcancel = pointerCancel
 
 		// prevent pinch/zoom on iOS 11
 		D.addEventListener('gesturestart', function(event) {
