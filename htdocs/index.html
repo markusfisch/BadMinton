@@ -653,6 +653,7 @@ function createEntities() {
 					}
 				}
 				if (x > horizon || x < -horizon) {
+					this.x = x > horizon ? horizon : -horizon
 					this.vx = -this.vx
 				}
 			}
