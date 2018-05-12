@@ -638,6 +638,7 @@ function createEntities() {
 						defender = ptwo
 					}
 					if (M.abs(defender.x - x) < playerRange) {
+						this.y = y < baseLine ? baseLine : -baseLine
 						this.vy = -this.vy
 						this.vy *= 1.05
 						defender.catched = now
