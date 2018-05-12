@@ -276,7 +276,8 @@ function drawAstronaut() {
 		e.last = now
 	}
 	drawCard(e)
-	drawSprite(sprite, e.x, e.y - (e.height - sprite.h), e.direction, e.up)
+	drawSprite(sprite, e.x, e.y - (e.height - sprite.h) * e.up, e.direction,
+		e.up)
 }
 
 function drawStars() {
