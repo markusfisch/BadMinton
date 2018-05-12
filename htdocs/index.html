@@ -444,7 +444,7 @@ function setPointer(event, down) {
 }
 
 function playCard(player) {
-	if (now - player.playedCard < cardFreq) {
+	if (missed || winner || now - player.playedCard < cardFreq) {
 		return
 	}
 	player.card.play(player)
