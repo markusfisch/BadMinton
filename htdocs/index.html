@@ -85,13 +85,15 @@ var M = Math,
 	ASTRONAUT_MOVE3 = 205,
 	ASTRONAUT_STROKE0 = 206,
 	ASTRONAUT_STROKE1 = 207,
-	BALL = 208,
-	STAR0 = 209,
-	STAR1 = 210,
-	CARD_PLUS = 211,
-	CARD_DISTRACT = 212,
-	CARD_REVERSE = 213,
-	CARD_DROP = 214,
+	ASTRONAUT_CHEER0 = 208,
+	ASTRONAUT_CHEER1 = 209,
+	BALL = 210,
+	STAR0 = 211,
+	STAR1 = 212,
+	CARD_PLUS = 213,
+	CARD_DISTRACT = 214,
+	CARD_REVERSE = 215,
+	CARD_DROP = 216,
 	atlas,
 	sprites = [],
 	gl,
@@ -143,7 +145,7 @@ var M = Math,
 	ended,
 	serve,
 	missed,
-	looser,
+	winner,
 	computer
 
 function drawSprite(sprite, x, y, wm, hm) {
@@ -239,7 +241,11 @@ function drawAstronaut() {
 		freq,
 		frames,
 		e = this
-	if (now - e.catched < 200) {
+	if (e === winner) {
+		frames = e.cheeringLength
+		sprite = e.cheering[e.frame % frames]
+		freq = e.cheeringFreq
+	} else if (now - e.catched < 200) {
 		frames = e.catchingLength
 		sprite = e.catching[e.frame % frames]
 		freq = e.catchingFreq
@@ -335,7 +341,7 @@ function contains(rc, x, y) {
 }
 
 function input() {
-	if (looser) {
+	if (winner) {
 		if (pointersLength > 0 && now - ended > 3000) {
 			resize()
 		}
@@ -403,8 +409,8 @@ function run() {
 		var y = yMax * .2
 		drawCenterText('TAP HERE FOR 2 PLAYERS', 0, y)
 		drawCenterText('TAP HERE FOR 1 PLAYER', 0, -y)
-	} else if (looser) {
-		drawCenterText('PLAYER ' + looser.name + ' LOST', 0, 0)
+	} else if (winner) {
+		drawCenterText('PLAYER ' + winner.name + ' WON', 0, 0)
 	} else if (missed) {
 		drawCenterText('PLAYER ' + missed.name + ' MISSED', 0, 0)
 	}
@@ -460,7 +466,7 @@ function pointerUp(event) {
 		}
 	}
 	setPointer(event, false)
-	if (missed && serve < now) {
+	if (!winner && missed && serve < now) {
 		ball.stroke(missed)
 		missed.catched = now
 		missed = null
@@ -560,7 +566,12 @@ function createEntities() {
 			sprites[ASTRONAUT_STROKE0],
 			sprites[ASTRONAUT_STROKE1],
 		],
-		catchingFreq: 100,
+		catchingFreq: 200,
+		cheering: [
+			sprites[ASTRONAUT_CHEER0],
+			sprites[ASTRONAUT_CHEER1],
+		],
+		cheeringFreq: 200,
 		x: horizon,
 		y: baseLine,
 		direction: 1,
@@ -592,7 +603,12 @@ function createEntities() {
 			sprites[ASTRONAUT_STROKE0],
 			sprites[ASTRONAUT_STROKE1],
 		],
-		catchingFreq: 100,
+		catchingFreq: 200,
+		cheering: [
+			sprites[ASTRONAUT_CHEER0],
+			sprites[ASTRONAUT_CHEER1],
+		],
+		cheeringFreq: 200,
 		x: -horizon,
 		y: -baseLine,
 		direction: 1,
@@ -627,7 +643,7 @@ function createEntities() {
 				y = this.y
 			x += this.vx * factor
 			y += this.vy * factor
-			if (!missed && !looser) {
+			if (!missed && !winner) {
 				if (y < baseLine || y > -baseLine) {
 					var shooter, defender
 					if (y < 0) {
@@ -643,8 +659,8 @@ function createEntities() {
 						this.vy *= 1.05
 						defender.catched = now
 					} else if (missed !== defender) {
-						if (++shooter.score >= 21) {
-							looser = defender
+						if (++shooter.score >= 2) {
+							winner = shooter
 							ended = now
 						} else {
 							moveTo(shooter, 0)
@@ -675,7 +691,9 @@ function createEntities() {
 		e.idleLength = e.idle ? e.idle.length : 0
 		e.moveLength = e.move ? e.move.length : 0
 		e.catchingLength = e.catching ? e.catching.length : 0
-		e.height = getMaxHeightFromSets([e.idle, e.move, e.catching])
+		e.cheeringLength = e.cheering ? e.cheering.length : 0
+		e.height = getMaxHeightFromSets([e.idle, e.move, e.catching,
+			e.cheering])
 		e.frame = 0
 		e.last = 0
 		e.playedCard = 0
@@ -761,7 +779,7 @@ function resize() {
 	spaceWidth = sprites[87].w
 	letterSpacing = spaceWidth * -.05
 	playerRange = sprites[ASTRONAUT_IDLE0].w * 1.5
-	started = ended = missed = serve = looser = null
+	started = ended = missed = serve = winner = null
 
 	createCards()
 	createEntities()
@@ -771,62 +789,64 @@ function resize() {
 function calculateSpriteRects() {
 	var res = [
 			PLANET, {/*planet*/x:1,y:1,w:650,h:78},
-			ASTRONAUT_IDLE0, {/*astronaut_idle0*/x:761,y:1,w:48,h:75},
-			ASTRONAUT_IDLE1, {/*astronaut_idle1*/x:177,y:81,w:51,h:71},
-			ASTRONAUT_MOVE0, {/*astronaut_move0*/x:117,y:81,w:58,h:73},
-			ASTRONAUT_MOVE1, {/*astronaut_move1*/x:60,y:81,w:55,h:78},
-			ASTRONAUT_MOVE2, {/*astronaut_move2*/x:653,y:1,w:52,h:78},
-			ASTRONAUT_MOVE3, {/*astronaut_move3*/x:707,y:1,w:52,h:77},
-			ASTRONAUT_STROKE0, {/*astronaut_stroke0*/x:1,y:81,w:57,h:87},
-			ASTRONAUT_STROKE1, {/*astronaut_stroke1*/x:230,y:81,w:47,h:70},
-			BALL, {/*ball*/x:455,y:81,w:11,h:11},
-			STAR0, {/*star0*/x:761,y:78,w:1,h:1},
-			STAR1, {/*star1*/x:758,y:81,w:2,h:2},
-			CARD_PLUS, {/*card_plus*/x:323,y:81,w:42,h:64},
-			CARD_DISTRACT, {/*card_distract*/x:411,y:81,w:42,h:64},
-			CARD_REVERSE, {/*card_reverse*/x:279,y:81,w:42,h:64},
-			CARD_DROP, {/*card_drop*/x:367,y:81,w:42,h:64},
-			44, {/*ccomma*/x:748,y:81,w:3,h:4},
-			46, {/*cpoint*/x:753,y:81,w:3,h:3},
-			48, {/*c0*/x:719,y:81,w:5,h:7},
-			49, {/*c1*/x:732,y:81,w:4,h:7},
-			50, {/*c2*/x:712,y:81,w:5,h:7},
-			51, {/*c3*/x:705,y:81,w:5,h:7},
-			52, {/*c4*/x:698,y:81,w:5,h:7},
-			53, {/*c5*/x:691,y:81,w:5,h:7},
-			54, {/*c6*/x:684,y:81,w:5,h:7},
-			55, {/*c7*/x:677,y:81,w:5,h:7},
-			56, {/*c8*/x:670,y:81,w:5,h:7},
-			57, {/*c9*/x:663,y:81,w:5,h:7},
-			58, {/*ccolon*/x:743,y:81,w:3,h:5},
-			33, {/*cexcl*/x:738,y:81,w:3,h:7},
-			63, {/*cquest*/x:537,y:81,w:5,h:7},
-			65, {/*cA*/x:656,y:81,w:5,h:7},
-			66, {/*cB*/x:649,y:81,w:5,h:7},
-			67, {/*cC*/x:642,y:81,w:5,h:7},
-			68, {/*cD*/x:635,y:81,w:5,h:7},
-			69, {/*cE*/x:628,y:81,w:5,h:7},
-			70, {/*cF*/x:621,y:81,w:5,h:7},
-			71, {/*cG*/x:614,y:81,w:5,h:7},
-			72, {/*cH*/x:607,y:81,w:5,h:7},
-			73, {/*cI*/x:600,y:81,w:5,h:7},
-			74, {/*cJ*/x:726,y:81,w:4,h:7},
-			75, {/*cK*/x:593,y:81,w:5,h:7},
-			76, {/*cL*/x:586,y:81,w:5,h:7},
-			77, {/*cM*/x:504,y:81,w:7,h:7},
-			78, {/*cN*/x:529,y:81,w:6,h:7},
-			79, {/*cO*/x:579,y:81,w:5,h:7},
-			80, {/*cP*/x:572,y:81,w:5,h:7},
-			81, {/*cQ*/x:521,y:81,w:6,h:7},
-			82, {/*cR*/x:565,y:81,w:5,h:7},
-			83, {/*cS*/x:558,y:81,w:5,h:7},
-			84, {/*cT*/x:551,y:81,w:5,h:7},
-			85, {/*cU*/x:544,y:81,w:5,h:7},
-			86, {/*cV*/x:495,y:81,w:7,h:7},
-			87, {/*cW*/x:486,y:81,w:7,h:7},
-			88, {/*cX*/x:477,y:81,w:7,h:7},
-			89, {/*cY*/x:468,y:81,w:7,h:7},
-			90, {/*cZ*/x:513,y:81,w:6,h:7},
+			ASTRONAUT_IDLE0, {/*astronaut_idle0*/x:415,y:81,w:48,h:75},
+			ASTRONAUT_IDLE1, {/*astronaut_idle1*/x:465,y:81,w:51,h:71},
+			ASTRONAUT_MOVE0, {/*astronaut_move0*/x:247,y:81,w:58,h:73},
+			ASTRONAUT_MOVE1, {/*astronaut_move1*/x:190,y:81,w:55,h:78},
+			ASTRONAUT_MOVE2, {/*astronaut_move2*/x:307,y:81,w:52,h:78},
+			ASTRONAUT_MOVE3, {/*astronaut_move3*/x:361,y:81,w:52,h:77},
+			ASTRONAUT_STROKE0, {/*astronaut_stroke0*/x:131,y:81,w:57,h:87},
+			ASTRONAUT_STROKE1, {/*astronaut_stroke1*/x:518,y:81,w:47,h:70},
+			ASTRONAUT_CHEER0, {/*astronaut_cheer0*/x:69,y:81,w:60,h:86},
+			ASTRONAUT_CHEER1, {/*astronaut_cheer1*/x:1,y:81,w:66,h:83},
+			BALL, {/*ball*/x:653,y:67,w:11,h:11},
+			STAR0, {/*star0*/x:693,y:71,w:1,h:1},
+			STAR1, {/*star1*/x:693,y:67,w:2,h:2},
+			CARD_PLUS, {/*card_plus*/x:611,y:81,w:42,h:64},
+			CARD_DISTRACT, {/*card_distract*/x:655,y:81,w:42,h:64},
+			CARD_REVERSE, {/*card_reverse*/x:567,y:81,w:42,h:64},
+			CARD_DROP, {/*card_drop*/x:653,y:1,w:42,h:64},
+			44, {/*ccomma*/x:528,y:153,w:3,h:4},
+			46, {/*cpoint*/x:684,y:76,w:3,h:3},
+			48, {/*c0*/x:581,y:156,w:5,h:7},
+			49, {/*c1*/x:567,y:156,w:4,h:7},
+			50, {/*c2*/x:588,y:156,w:5,h:7},
+			51, {/*c3*/x:602,y:156,w:5,h:7},
+			52, {/*c4*/x:595,y:156,w:5,h:7},
+			53, {/*c5*/x:602,y:147,w:5,h:7},
+			54, {/*c6*/x:595,y:147,w:5,h:7},
+			55, {/*c7*/x:588,y:147,w:5,h:7},
+			56, {/*c8*/x:581,y:147,w:5,h:7},
+			57, {/*c9*/x:574,y:147,w:5,h:7},
+			58, {/*ccolon*/x:523,y:153,w:3,h:5},
+			33, {/*cexcl*/x:518,y:153,w:3,h:7},
+			63, {/*cquest*/x:681,y:156,w:5,h:7},
+			65, {/*cA*/x:567,y:147,w:5,h:7},
+			66, {/*cB*/x:611,y:156,w:5,h:7},
+			67, {/*cC*/x:618,y:156,w:5,h:7},
+			68, {/*cD*/x:625,y:156,w:5,h:7},
+			69, {/*cE*/x:632,y:156,w:5,h:7},
+			70, {/*cF*/x:646,y:156,w:5,h:7},
+			71, {/*cG*/x:639,y:156,w:5,h:7},
+			72, {/*cH*/x:646,y:147,w:5,h:7},
+			73, {/*cI*/x:639,y:147,w:5,h:7},
+			74, {/*cJ*/x:574,y:156,w:4,h:7},
+			75, {/*cK*/x:632,y:147,w:5,h:7},
+			76, {/*cL*/x:625,y:147,w:5,h:7},
+			77, {/*cM*/x:664,y:147,w:7,h:7},
+			78, {/*cN*/x:689,y:147,w:6,h:7},
+			79, {/*cO*/x:618,y:147,w:5,h:7},
+			80, {/*cP*/x:611,y:147,w:5,h:7},
+			81, {/*cQ*/x:681,y:147,w:6,h:7},
+			82, {/*cR*/x:655,y:156,w:5,h:7},
+			83, {/*cS*/x:664,y:156,w:5,h:7},
+			84, {/*cT*/x:673,y:156,w:5,h:7},
+			85, {/*cU*/x:688,y:156,w:5,h:7},
+			86, {/*cV*/x:655,y:147,w:7,h:7},
+			87, {/*cW*/x:684,y:67,w:7,h:7},
+			88, {/*cX*/x:675,y:67,w:7,h:7},
+			89, {/*cY*/x:666,y:67,w:7,h:7},
+			90, {/*cZ*/x:673,y:147,w:6,h:7},
 		],
 		positions = [],
 		xf = 1 / atlas.width,
