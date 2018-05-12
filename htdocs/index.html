@@ -641,8 +641,8 @@ function createEntities() {
 			}
 			var x = this.x,
 				y = this.y
-			x += this.vx * factor
-			y += this.vy * factor
+			x += this.vx
+			y += this.vy
 			if (!missed && !winner) {
 				if (y < baseLine || y > -baseLine) {
 					var shooter, defender
@@ -654,7 +654,7 @@ function createEntities() {
 						defender = ptwo
 					}
 					if (M.abs(defender.x - x) < playerRange) {
-						this.y = y < baseLine ? baseLine : -baseLine
+						this.y -= y - baseLine
 						this.vy = -this.vy
 						this.vy *= 1.05
 						defender.catched = now
@@ -671,7 +671,7 @@ function createEntities() {
 					}
 				}
 				if (x > horizon || x < -horizon) {
-					this.x = x > horizon ? horizon : -horizon
+					this.x -= x - horizon
 					this.vx = -this.vx
 				}
 			}
