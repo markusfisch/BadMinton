@@ -146,7 +146,8 @@ var M = Math,
 	serve,
 	missed,
 	winner,
-	computer
+	computer,
+	computerLast
 
 function drawSprite(sprite, x, y, wm, hm) {
 	gl.bindBuffer(gl.ARRAY_BUFFER, texturePositionBuffer)
@@ -372,14 +373,43 @@ function input() {
 			moveTo(ptwo, x)
 		}
 	}
-	if (computer && ball.vy > 0 && !missed) {
-		var px = ptwo.x,
-			bx = ball.x,
-			by = ball.y,
-			d = M.abs(baseLine) - by
-		bx += ball.vx * d
-		if (M.abs(ptwo.x - bx) > playerRange) {
-			ptwo.tx = M.max(-horizon, M.min(horizon, bx))
+	if (computer && !missed) {
+		var vy = ball.vy
+		if (vy > 0) {
+			var px = ptwo.x,
+				bx = ball.x,
+				by = ball.y,
+				d = M.abs(baseLine) - by
+			bx += ball.vx * d
+			if (M.abs(px - bx) > playerRange) {
+				ptwo.tx = M.max(-horizon, M.min(horizon, bx))
+			}
+		}
+		if (now - computerLast > 1000) {
+			computerLast = now
+			switch (ptwo.card.id) {
+			case CARD_PLUS:
+				if (vy < 0) {
+					playCard(ptwo)
+				}
+				break
+			case CARD_DISTRACT:
+				if (vy < 0 && ball.y / baseLine > .8) {
+					playCard(ptwo)
+				}
+				break
+			case CARD_REVERSE:
+				var by = ball.y
+				if (vy > 0 && by < 0 && by / baseLine < .5) {
+					playCard(ptwo)
+				}
+				break
+			case CARD_DROP:
+				if (vy > 0) {
+					playCard(ptwo)
+				}
+				break
+			}
 		}
 	}
 }
@@ -702,12 +732,14 @@ function createEntities() {
 
 function createCards() {
 	cards = [{
+		id: CARD_PLUS,
 		sprite: sprites[CARD_PLUS],
 		play: function() {
 			ball.vx *= 1.3
 			ball.vy *= 1.3
 		}
 	}, {
+		id: CARD_DISTRACT,
 		sprite: sprites[CARD_DISTRACT],
 		play: function() {
 			var vx = ball.vx,
@@ -719,15 +751,16 @@ function createCards() {
 			ball.vx += ball.vx < 0 ? -mx : mx
 		}
 	}, {
+		id: CARD_REVERSE,
 		sprite: sprites[CARD_REVERSE],
 		play: function() {
 			ball.vy = -ball.vy
 		}
 	}, {
+		id: CARD_DROP,
 		sprite: sprites[CARD_DROP],
 		play: function(player) {
 			var p = player === pone ? ptwo : pone
-			p.card = newCard()
 			p.playedCard = now
 		}
 	}]
@@ -780,6 +813,7 @@ function resize() {
 	letterSpacing = spaceWidth * -.05
 	playerRange = sprites[ASTRONAUT_IDLE0].w * 1.5
 	started = ended = missed = serve = winner = null
+	computerLast = 0
 
 	createCards()
 	createEntities()
