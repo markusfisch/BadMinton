@@ -434,17 +434,19 @@ function run() {
 		entities[i].draw()
 	}
 
-	drawScore(pone.score, scoreX, scoreBase)
-	drawScore(ptwo.score, scoreX, -scoreBase)
-
 	if (!started) {
 		var y = yMax * .2
 		drawCenterText('TAP HERE FOR 2 PLAYERS', 0, y)
 		drawCenterText('TAP HERE FOR 1 PLAYER', 0, -y)
-	} else if (winner) {
-		drawCenterText('PLAYER ' + winner.name + ' WON', 0, 0)
-	} else if (missed) {
-		drawCenterText('PLAYER ' + missed.name + ' MISSED', 0, 0)
+	} else {
+		drawScore(pone.score, scoreX, scoreBase)
+		drawScore(ptwo.score, scoreX, -scoreBase)
+
+		if (winner) {
+			drawCenterText('PLAYER ' + winner.name + ' WON', 0, 0)
+		} else if (missed) {
+			drawCenterText('PLAYER ' + missed.name + ' MISSED', 0, 0)
+		}
 	}
 }
 
