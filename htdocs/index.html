@@ -354,7 +354,7 @@ function input() {
 			computer = pointersY[0] < 0
 			started = now
 			pone.catched = now
-			ball.x = pone.x
+			ball.stroke(pone)
 			pong.play()
 		}
 		return
@@ -714,7 +714,6 @@ function createEntities() {
 			drawSprite(this.sprite, x, y)
 		}
 	})
-	ball.stroke(pone)
 
 	entitiesLength = entities.length
 
