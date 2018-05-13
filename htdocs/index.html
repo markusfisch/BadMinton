@@ -95,6 +95,7 @@ var M = Math,
 	CARD_REVERSE = 215,
 	CARD_DROP = 216,
 	atlas,
+	pong,
 	sprites = [],
 	gl,
 	vertexPositionBuffer,
@@ -354,6 +355,7 @@ function input() {
 			started = now
 			pone.catched = now
 			ball.x = pone.x
+			pong.play()
 		}
 		return
 	}
@@ -498,6 +500,7 @@ function pointerUp(event) {
 	setPointer(event, false)
 	if (!winner && missed && serve < now) {
 		ball.stroke(missed)
+		pong.play()
 		missed.catched = now
 		missed = null
 	}
@@ -688,6 +691,7 @@ function createEntities() {
 						this.vy = -this.vy
 						this.vy *= 1.05
 						defender.catched = now
+						pong.play()
 					} else if (missed !== defender) {
 						if (++shooter.score >= 11) {
 							winner = shooter
@@ -1071,6 +1075,8 @@ function load() {
 	atlas = new Image()
 	atlas.src = 'atlas.png'
 	atlas.onload = start
+
+	pong = new Audio('pong.m4a')
 }
 
 W.onload = load
