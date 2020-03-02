@@ -11,7 +11,7 @@ OPTIONS = \
 	--compress
 
 live: $(ATLAS)
-	rsync $(OPTIONS) $(HTDOCS)/* $(WEBROOT)
+	rsync $(OPTIONS) $(HTDOCS)/* $(HTDOCS)/.htaccess $(WEBROOT)
 
 $(ATLAS): $(SPRITES)
 	cd $(HTDOCS) && \
